@@ -1,0 +1,145 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Category {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  image       String?
+  isActive    Boolean   @default(true)
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("categories")
+}
+
+model Product {
+  id               Int            @id @default(autoincrement())
+  name             String
+  slug             String         @unique
+  description      String
+  shortDesc        String?
+  priceInPaise     Int // Store price in paise (1 INR = 100 paise) for precision
+  stock            Int            @default(0)
+  isActive         Boolean        @default(true)
+  isFeatured       Boolean        @default(false)
+  weight           Float? // Weight in kg
+  dimensions       String? // Dimensions as string (e.g., "15x10x8 cm")
+  material         String? // Clay type/material info
+  careInstructions String?
+  categoryId       Int
+  category         Category       @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  images           ProductImage[]
+  orderItems       OrderItem[]
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@index([categoryId])
+  @@index([slug])
+  @@index([isActive])
+  @@index([isFeatured])
+  @@map("products")
+}
+
+model ProductImage {
+  id        Int      @id @default(autoincrement())
+  url       String
+  altText   String?
+  isPrimary Boolean  @default(false)
+  sortOrder Int      @default(0)
+  productId Int
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+  @@index([isPrimary])
+  @@map("product_images")
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  email     String    @unique
+  password  String
+  firstName String
+  lastName  String
+  role      String    @default("ADMIN")
+  isActive  Boolean   @default(true)
+  lastLogin DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([email])
+  @@map("users")
+}
+
+model Order {
+  id          Int    @id @default(autoincrement())
+  orderNumber String @unique
+  status      String @default("PENDING")
+
+  // Customer Information
+  customerName  String
+  customerEmail String
+  customerPhone String
+
+  // Shipping Address
+  shippingAddress String
+  shippingCity    String
+  shippingState   String?
+  shippingPincode String
+
+  // Order Details
+  subtotalInPaise Int // Subtotal in paise
+  shippingInPaise Int @default(0) // Shipping cost in paise
+  totalInPaise    Int // Total amount in paise
+
+  // Payment
+  paymentMethod String
+  paymentStatus String @default("PENDING")
+
+  // Order Items
+  items OrderItem[]
+
+  // Timestamps
+  orderDate    DateTime  @default(now())
+  deliveryDate DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([orderNumber])
+  @@index([status])
+  @@index([customerEmail])
+  @@index([orderDate])
+  @@map("orders")
+}
+
+model OrderItem {
+  id           Int @id @default(autoincrement())
+  quantity     Int
+  priceInPaise Int // Price per unit at time of order (in paise)
+
+  // Relations
+  orderId   Int
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId Int
+  product   Product @relation(fields: [productId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_items")
+}
+
+// Enums removed for SQLite compatibility; using string columns instead.
